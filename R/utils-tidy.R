@@ -2,7 +2,6 @@
 # Idea taken "Writing performance code with tidy tools" by Simon Couch
 # https://www.tidyverse.org/blog/2023/04/performant-packages/
 
-
 #' Internal Implementation of `dplyr::select`
 #'
 #' @param .data A `data.frame` or `tibble`.
@@ -86,8 +85,21 @@ mutate_ <- function(.data, col, value) {
 #' @return A `tibble`.
 #'
 #' @noRd
-arrange_ <- function(.data, col, .direction = c("asc", "desc")) {
-  check_cols_exist(.data, col)
+arrange_ <- function(.data,
+                     col,
+                     .direction = c("asc", "desc"),
+                     .call = caller_env()) {
+
+  check_cols_exist(.data, col, .call = .call)
+
+  if (!(.direction[[1]] %in% c("asc", "desc"))) {
+    cli_abort(
+      "Argument {.arg .direction} must be one of 'asc' or 'desc'.",
+      .call = .call
+    )
+  }
+
+  .direction <- .direction[[1]]
 
   cols_order_chr <- colnames(.data)
 
