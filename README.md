@@ -6,6 +6,8 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/RobbyLankford/geomatch/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RobbyLankford/geomatch/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/RobbyLankford/geomatch/graph/badge.svg)](https://app.codecov.io/gh/RobbyLankford/geomatch)
 <!-- badges: end -->
 
 The `geomatch` package provides functions for matching geographies
