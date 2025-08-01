@@ -1,0 +1,76 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# geomatch
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+The `geomatch` package provides functions for matching geographies
+(state, zip code, etc.) based on geographic-specific features.
+
+## Installation
+
+You can install the development version of geomatch from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("pak")
+pak::pak("RobbyLankford/geomatch")
+```
+
+## Example
+
+The basic idea of the `geomatch` package is to use the `geo_match()`
+function to determine the “most similar” geography to another geography,
+based on statistical similarity between the geographies.
+
+For example, if you have U.S. State-level data and want to determine,
+based on that data, which U.S. State is “most similar” to, say,
+Massachusetts:
+
+``` r
+library(geomatch)
+
+# Use simulated features for U.S. States
+set.seed(1914)
+
+state_data_tbl <- data.frame(
+  state_code = c(state.abb, "DC"),
+  state_name = c(state.name, "Washington, DC"),
+    
+  med_income  = round(rnorm(51, mean = 50000, sd = 15000)),
+  pop_density = round(rnorm(51, mean = 1500, sd = 500)),
+  pct_college = round(runif(51, min = 0.2, max = 0.8), 2)
+)
+
+# Get the top match
+geo_match(
+  state_data_tbl, state_code, 
+  
+  target     = "MA", 
+  covariates = c("med_income", "pop_density", "pct_college")
+)
+#> # A tibble: 2 × 6
+#>   state_code state_name    med_income pop_density pct_college .distance
+#>   <chr>      <chr>              <dbl>       <dbl>       <dbl>     <dbl>
+#> 1 MA         Massachusetts      33267         476        0.34        0 
+#> 2 WA         Washington         31966        2272        0.47     2218.
+
+# Get the top 3 matches
+geo_match(
+  state_data_tbl, state_code,
+  
+  target     = "MA",
+  covariates = c("med_income", "pop_density", "pct_college"),
+  .matches   = 3
+)
+#> # A tibble: 4 × 6
+#>   state_code state_name     med_income pop_density pct_college .distance
+#>   <chr>      <chr>               <dbl>       <dbl>       <dbl>     <dbl>
+#> 1 MA         Massachusetts       33267         476        0.34        0 
+#> 2 WA         Washington          31966        2272        0.47     2218.
+#> 3 ME         Maine               30940        1020        0.55     2390.
+#> 4 DC         Washington, DC      30673        1608        0.65     2830.
+```
