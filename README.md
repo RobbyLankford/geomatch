@@ -5,6 +5,7 @@
 
 <!-- badges: start -->
 
+[![R-CMD-check](https://github.com/RobbyLankford/geomatch/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RobbyLankford/geomatch/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 The `geomatch` package provides functions for matching geographies
