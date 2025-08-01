@@ -40,13 +40,13 @@ remove_ <- function(.data, ..., .call = caller_env()) {
 #' @param col Quoted column name in `.data`.
 #' @param .call Used for error handling.
 #'
-#' @return A `tibble`.
+#' @return A vector.
 #'
 #' @noRd
 pull_ <- function(.data, col, .call = caller_env()) {
   check_cols_exist(.data, col, .call = .call)
 
-  as_tibble(.data[[col]])
+  .data[[col]]
 }
 
 

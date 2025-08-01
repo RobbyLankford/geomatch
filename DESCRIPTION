@@ -13,7 +13,11 @@ Imports:
     cli (>= 3.6.0),
     rlang (>= 1.1.0),
     tibble (>= 3.0.0),
+    tidyselect,
     vctrs
 Depends: 
     R (>= 3.5)
 LazyData: true
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
