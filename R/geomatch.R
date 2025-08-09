@@ -57,97 +57,19 @@ geo_match <- function(.data,
                       .matches = 1,
                       .scale   = FALSE) {
 
-  id_col_quo <- enquo(id_col)
+  check_id_col(.data, {{ id_col }})
 
-  if (quo_is_missing(id_col_quo)) {
-    cli_abort(c(
-            "Missing function argument.",
-      "i" = "Please specify a value for argument {.arg id_col}."
-    ))
-  }
+  id_col_str <- arg_to_str({{ id_col }})
 
-  id_col_str  <- as_name(id_col_quo)
-
-  if (!(id_col_str %in% colnames(.data))) {
-    cli_abort(c(
-            "ID column {.val {id_col_str}} not found.",
-      "i" = "Please specify a column name that exists in {.arg .data}."
-    ))
-  }
+  check_target(.data, {{ target }}, id_col_str)
 
   id_col_vals <- pull_(.data, id_col_str)
 
-  if (is_missing(target)) {
-    cli_abort(c(
-            "Missing function argument.",
-      "i" = "Please specify a value for argument {.arg target}."
-    ))
-  }
+  .data <- validate_id_col(.data, id_col_str)
 
-  if (!(target %in% id_col_vals)) {
-    cli_abort(c(
-            "Target ID '{target}' not found.",
-      "i" = "Please specify a value found in column {.var {id_col_str}}."
-    ))
-  }
+  covariates_chr <- validate_covariates(.data, {{ covariates }})
 
-  if (is_bare_numeric(id_col_vals)) {
-    cli_alert_info("Target variable {.var {id_col_str}} is numeric.")
-    cli_alert_info("Casting target variable {.var {id_col_str}} to character.")
-
-    .data <- mutate_(.data, id_col_str, as.character(id_col_vals))
-  }
-
-  if (is_missing(.matches)) .matches <- 1
-
-  if (.matches < 1) {
-    cli_abort(c(
-            "Argument {.arg .matches} too small.",
-      "i" = "Please specify a value of at least {.val {as.integer(1)}}."
-    ))
-  }
-
-  max_int <- length(id_col_vals)
-
-  if (.matches >= max_int) {
-    cli_abort(c(
-            "Argument {.arg .matches} too large.",
-      "i" = "Please specify a value less than {.val {max_int}}."
-    ))
-  }
-
-  covariates_quo <- enquo(covariates)
-
-  if (quo_is_missing(covariates_quo)) {
-    cli_alert_warning("Argument {.arg covariates} is missing.")
-    cli_alert_info("All numeric columns will be used as covariates.")
-
-    numeric_mask_lgl <- sapply(.data, is_bare_numeric)
-
-    if (!any(numeric_mask_lgl)) {
-      cli_abort(c(
-              "No numeric columns found.",
-        "i" = "At least one potential covariate column must be numeric."
-      ))
-    }
-
-    numeric_cols_chr <- colnames(.data)[numeric_mask_lgl]
-    numeric_data_tbl <- select_(.data, numeric_cols_chr)
-
-    covariates_chr <- colnames(numeric_data_tbl)
-  } else {
-    covar_names_chr <- names(eval_select(covariates, data = .data))
-    check_mask_lgl  <- sapply(.data[covar_names_chr], is_bare_numeric)
-
-    if (!all(check_mask_lgl)) {
-      cli_abort(c(
-              "Columns specified in {.var covariates} are not all numeric.",
-        "i" = "Please specify only numeric columns as covariates."
-      ))
-    }
-
-    covariates_chr <- covar_names_chr
-  }
+  .matches <- validate_matches(.data, .matches, id_col_str)
 
   match_data_tbl <- select_(.data, c(id_col_str, covariates_chr))
 
@@ -184,4 +106,105 @@ geo_match <- function(.data,
   out_tbl <- arrange_(out_tbl, ".distance", .direction = "asc")
 
   filter_(out_tbl, 1:(.matches + 1))
+}
+
+# UTILS -----------------------------------------------------------------------
+check_id_col <- function(.data, id_col, .call = caller_env()) {
+  check_missing_arg({{ id_col }}, name = "id_col", .call = .call)
+
+  id_col_str <- arg_to_str({{ id_col }})
+
+  check_exists_in(id_col_str, colnames(.data), name = "id_col", .call = .call)
+
+  invisible(TRUE)
+}
+
+check_target <- function(.data, target, id_col, .call = caller_env()) {
+  check_missing_arg({{ target }}, name = "target", .call = .call)
+  check_exists_in(target, .data[[id_col]], name = "target")
+}
+
+validate_id_col <- function(.data, id_col, .call = caller_env()) {
+  id_col_vals <- .data[[id_col]]
+
+  if (is_bare_numeric(id_col_vals)) {
+    cli_warn(c(
+            "Target variable {.var {id_col}} is numeric.",
+      "i" = "Automatically casting {.var {id_col}} to character."
+    ), call = .call)
+  }
+
+  mutate_(.data, id_col, as.character(id_col_vals))
+}
+
+validate_covariates <- function(.data, covariates, .call = caller_env()) {
+  covariates_quo <- enquo(covariates)
+
+  if (quo_is_missing(covariates_quo)) {
+    cli_warn(c(
+            "Argument {.arg covariates} is missing.",
+      "i" = "Will attempt to use all numeric columns as covariates."
+    ), call = .call)
+
+    numeric_mask_lgl <- sapply(.data, is_bare_numeric)
+
+    if (!any(numeric_mask_lgl)) {
+      cli_abort(c(
+              "No numeric columns found.",
+        "i" = "Please use a data set that has at least one numeric covariate."
+      ), call = .call)
+    }
+
+    numeric_cols_chr <- colnames(.data)[numeric_mask_lgl]
+    numeric_data_tbl <- select_(.data, numeric_cols_chr)
+    covar_names_chr  <- colnames(numeric_data_tbl)
+  } else {
+    covar_names_chr <- names(eval_select(covariates, data = .data))
+    check_mask_lgl  <- sapply(.data[covar_names_chr], is_bare_numeric)
+
+    if (!all(check_mask_lgl)) {
+      cli_abort(c(
+              "Columns specified in {.var covariates} are not all numeric.",
+        "i" = "Please specify only numeric columns as covariates."
+      ), call = .call)
+    }
+  }
+
+  covar_names_chr
+}
+
+validate_matches <- function(.data, .matches, id_col, .call = caller_env()) {
+  min_int <- as.integer(1)
+  max_int <- length(.data[[id_col]]) - 1
+
+  matches_quo <- enquo(.matches)
+
+  if (quo_is_missing(matches_quo)) {
+    cli_warn(c(
+            "No value given for argument {.arg .matches}.",
+      "i" = "Setting {.arg .matches} to default value of {.val {min_int}}."
+    ), call = .call)
+
+    .matches <- min_int
+  }
+
+  if (.matches < 1) {
+    cli_warn(c(
+            "Argument {.arg .matches} cannot be less than {.val {min_int}}.",
+      "i" = "Setting {.arg .matches} to default value of {.val {min_int}}."
+    ), call = .call)
+
+    .matches <- min_int
+  }
+
+  if (.matches > max_int) {
+    cli_warn(c(
+            "Argument {.arg .matches} cannot be greater than {.val {max_int}}.",
+      "i" = "Setting {.arg .matches} to maximum value of {.val {max_int}}."
+    ), call = .call)
+
+    .matches <- max_int
+  }
+
+  .matches
 }

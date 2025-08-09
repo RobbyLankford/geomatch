@@ -111,6 +111,18 @@ arrange_ <- function(.data,
 
 
 # Helpers ---------------------------------------------------------------------
+
+#' Check Columns Exist in a Data Frame
+#'
+#' @template param-call
+#'
+#' @param .data A `data.frame` or `tibble`.
+#' @param ... At least one (quoted) column name.
+#'
+#' @return `TRUE`, invisibly, if all column names exist in `.data`, otherwise
+#'   an error is thrown.
+#'
+#' @noRd
 check_cols_exist <- function(.data, ..., .call = caller_env()) {
   if (!(all(c(...) %in% colnames(.data)))) {
     cli_abort("Not all column names found in {.arg .data}", call = .call)
