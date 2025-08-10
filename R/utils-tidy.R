@@ -4,11 +4,11 @@
 
 #' Internal Implementation of `dplyr::select`
 #'
-#' @param .data A `data.frame` or `tibble`.
 #' @param ... Quoted column names in `.data`.
-#' @param .call Used for error handling.
 #'
-#' @return A `tibble`
+#' @template param-data
+#' @template param-call
+#' @template return-tibble
 #'
 #' @noRd
 select_ <- function(.data, ..., .call = caller_env()) {
@@ -20,11 +20,11 @@ select_ <- function(.data, ..., .call = caller_env()) {
 
 #' Internal Implementation of `dplyr::select` (Specifically for Removing)
 #'
-#' @param .data A `data.frame` or `tibble`.
 #' @param ... Quoted column names in `.data`.
-#' @param .call Used for error handling.
 #'
-#' @return A `tibble`
+#' @template param-data
+#' @template param-call
+#' @template return-tibble
 #'
 #' @noRd
 remove_ <- function(.data, ..., .call = caller_env()) {
@@ -36,11 +36,12 @@ remove_ <- function(.data, ..., .call = caller_env()) {
 
 #' Internal Implementation of `dplyr::pull`
 #'
-#' @param .data A `data.frame` or `tibble`.
 #' @param col Quoted column name in `.data`.
-#' @param .call Used for error handling.
 #'
 #' @return A vector.
+#'
+#' @template param-data
+#' @template param-call
 #'
 #' @noRd
 pull_ <- function(.data, col, .call = caller_env()) {
@@ -52,22 +53,28 @@ pull_ <- function(.data, col, .call = caller_env()) {
 
 #' Internal Implementation of `dplyr::filter` Using `vctrs::vec_slice`
 #'
-#' @inherit vctrs::vec_slice
+#' @inheritParams vctrs::vec_slice
+#'
+#' @template param-call
+#' @template return-tibble
 #'
 #' @noRd
-filter_ <- vec_slice
+filter_ <- function(x, i, ..., .call = caller_env()) {
+  vec_slice(x, i, ..., error_call = .call)
+}
 
 
 #' Internal Implementation of `dplyr::mutate`
 #'
-#' @param .data A `data.frame` or `tibble`.
 #' @param col The quoted name of the (possibly new) column.
 #' @param value The value to assign to the column `col`.
 #'
-#' @return A `tibble`.
+#' @template param-data
+#' @template param-call
+#' @template return-tibble
 #'
 #' @noRd
-mutate_ <- function(.data, col, value) {
+mutate_ <- function(.data, col, value, .call = caller_env()) {
   .data[[col]] <- value
 
   as_tibble(.data)
@@ -76,13 +83,14 @@ mutate_ <- function(.data, col, value) {
 
 #' Internal Implementation of `dplyr::arrange`
 #'
-#' @param .data A `data.frame` or `tibble`.
 #' @param col The quoted name of the column to sort.
 #' @param .direction (Optional) Whether to sort the column in ascending or
 #'   descending order. Defaults to "asc" for ascending. Can also be "desc" for
 #'   descending.
 #'
-#' @return A `tibble`.
+#' @template param-data
+#' @template param-call
+#' @template return-tibble
 #'
 #' @noRd
 arrange_ <- function(.data,
@@ -114,9 +122,9 @@ arrange_ <- function(.data,
 
 #' Check Columns Exist in a Data Frame
 #'
+#' @template param-data
 #' @template param-call
 #'
-#' @param .data A `data.frame` or `tibble`.
 #' @param ... At least one (quoted) column name.
 #'
 #' @return `TRUE`, invisibly, if all column names exist in `.data`, otherwise
