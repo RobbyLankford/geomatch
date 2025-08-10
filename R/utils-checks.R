@@ -1,13 +1,13 @@
 #' Check for Missing Function Argument
 #'
-#' @template param-call
-#'
 #' @param arg The value of a function argument (should be passed using {{ }}).
 #' @param name The name of the argument to use in the error message.
 #' @param .call
 #'
 #' @return `TRUE`, invisibly, if argument is not missing, otherwise an error
 #'   is thrown.
+#'
+#' @template param-call
 #'
 #' @noRd
 check_missing_arg <- function(arg, name, .call = caller_env()) {
@@ -26,14 +26,14 @@ check_missing_arg <- function(arg, name, .call = caller_env()) {
 
 #' Check if Item Exists in a Set of Values
 #'
-#' @template param-call
-#'
 #' @param item The item to attempt to find in `values`.
 #' @param values The values in which to search for `item`.
 #' @param name The name of the set of values to use in the error message.
 #'
 #' @return `TRUE`, invisibly, if `item` is found in `values`, otherwise an
 #'   error is thrown.
+#'
+#' @template param-call
 #'
 #' @noRd
 check_exists_in <- function(item, values, name, .call = caller_env()) {

@@ -108,7 +108,22 @@ geo_match <- function(.data,
   filter_(out_tbl, 1:(.matches + 1))
 }
 
-# UTILS -----------------------------------------------------------------------
+
+# Helpers ---------------------------------------------------------------------
+
+#' Check `id_col` Argument
+#'
+#' This function performs initial checks for the `id_col` argument, ensuring
+#' that the argument is not missing and that it is a column that exists in
+#' `.data`.
+#'
+#' @return `TRUE`, if `id_col` is valid, otherwise an error is thrown.
+#'
+#' @template param-data-check
+#' @template param-id_col-check-unquote
+#' @template param-call
+#'
+#' @noRd
 check_id_col <- function(.data, id_col, .call = caller_env()) {
   check_missing_arg({{ id_col }}, name = "id_col", .call = .call)
 
@@ -119,11 +134,41 @@ check_id_col <- function(.data, id_col, .call = caller_env()) {
   invisible(TRUE)
 }
 
+
+#' Check `target` Argument
+#'
+#' This function performs initial checks for the `target` argument, ensuring
+#' that the argument is not missing and that it exists in the `id_col` column.
+#'
+#' @return `TRUE`, if `target` is valid, otherwise an error is thrown.
+#'
+#' @template param-data-check
+#' @template param-target-check
+#' @template param-id_col-check-quoted
+#' @template param-call
+#'
+#' @noRd
 check_target <- function(.data, target, id_col, .call = caller_env()) {
   check_missing_arg({{ target }}, name = "target", .call = .call)
   check_exists_in(target, .data[[id_col]], name = "target")
+
+  invisible(TRUE)
 }
 
+
+#' Validate `id_col` Argument
+#'
+#' This function validates the value of `id_col`, ensuring that it is a
+#' character value. If it is numeric, a warning will be thrown, and `id_col`
+#' will be converted to character type.
+#'
+#' @return `.data`, with `id_col` converted to character type, if necessary.
+#'
+#' @template param-data-check
+#' @template param-id_col-check-quoted
+#' @template param-call
+#'
+#' @noRd
 validate_id_col <- function(.data, id_col, .call = caller_env()) {
   id_col_vals <- .data[[id_col]]
 
@@ -132,11 +177,33 @@ validate_id_col <- function(.data, id_col, .call = caller_env()) {
             "Target variable {.var {id_col}} is numeric.",
       "i" = "Automatically casting {.var {id_col}} to character."
     ), call = .call)
+
+    ret_tbl <- mutate_(.data, id_col, as.character(id_col_vals))
+  } else {
+    ret_tbl <- .data
   }
 
-  mutate_(.data, id_col, as.character(id_col_vals))
+  ret_tbl
 }
 
+
+#' Check & Validate `covariate` Argument
+#'
+#' This function performs initial checks for and validates the value of
+#' `covariates`, ensuring that, if it is missing, all numeric variables in
+#' `.data` will be used as covariates. Further checks will be done to make sure
+#' that there are numeric columns that can be used as covariates. If no numeric
+#' data is available to use for covariates, an error is thrown.
+#'
+#' @param covariates The original value (one or multiple variables) originally
+#'   passed to `covariates`.
+#'
+#' @return A character vector of variable names to use as covariates.
+#'
+#' @template param-data-check
+#' @template param-call
+#'
+#' @noRd
 validate_covariates <- function(.data, covariates, .call = caller_env()) {
   covariates_quo <- enquo(covariates)
 
@@ -173,6 +240,22 @@ validate_covariates <- function(.data, covariates, .call = caller_env()) {
   covar_names_chr
 }
 
+
+#' Validate `.matches` Argument
+#'
+#' This function validates the value of `.matches`, ensuring that it is a value
+#' between some minimum (1) and maximum (one less than the number of IDs).
+#'
+#' @param .matches The numeric value originally passed to `.matches`.
+#'
+#' @return A numeric value of `.matches`, which may be updated from than the
+#'   original value if it is not a valid value.
+#'
+#' @template param-data-check
+#' @template param-id_col-check-quoted
+#' @template param-call
+#'
+#' @noRd
 validate_matches <- function(.data, .matches, id_col, .call = caller_env()) {
   min_int <- as.integer(1)
   max_int <- length(.data[[id_col]]) - 1
