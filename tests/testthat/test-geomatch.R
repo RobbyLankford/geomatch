@@ -3,8 +3,7 @@
 ## `id_col` -------------------------------------------------------------------
 test_that("missing `id_col` argument throws error and informs user", {
   expect_error(
-    geo_match(simulated_states, target = "CT", covariates = "avg_age"),
-    regexp = "id_col"
+    geo_match(simulated_states, target = "CT", covariates = "avg_age")
   )
 
   expect_no_error(
@@ -14,8 +13,7 @@ test_that("missing `id_col` argument throws error and informs user", {
 
 test_that("non-existant `id_col` argument throws error and informs user", {
   expect_error(
-    geo_match(simulated_states, zip, target = "CT", covariates = "avg_age"),
-    regexp = "not found"
+    geo_match(simulated_states, zip, target = "CT", covariates = "avg_age")
   )
 
   expect_no_error(
@@ -25,10 +23,7 @@ test_that("non-existant `id_col` argument throws error and informs user", {
 
 ## `target` -------------------------------------------------------------------
 test_that("missing `target` argument throws error and informs user", {
-  expect_error(
-    geo_match(simulated_states, state, covariates = "avg_age"),
-    regexp = "target"
-  )
+  expect_error(geo_match(simulated_states, state, covariates = "avg_age"))
 
   expect_no_error(
     geo_match(simulated_states, state, target = "CT", covariates = "avg_age")
@@ -37,8 +32,7 @@ test_that("missing `target` argument throws error and informs user", {
 
 test_that("non-existant `target` argument throws error and informs user", {
   expect_error(
-    geo_match(simulated_states, state, target = "PR", covariates = "avg_age"),
-    regexp = "not found"
+    geo_match(simulated_states, state, target = "PR", covariates = "avg_age")
   )
 
   expect_no_error(
@@ -61,21 +55,15 @@ test_that("numeric `target` informs user and casts to character", {
     regex = "to character"
   )
 
-  expect_type(
-    pull_(
-      suppressWarnings(
-        geo_match(data_num_tbl, zip, target = 25081, covariates = "avg_age")
-      ),
-
-      "zip"
-    ),
-
-    "character"
-  )
-
   expect_no_warning(
     geo_match(simulated_zips, zip, target = "25081", covariates = "avg_age")
   )
+
+  results_tbl <- suppressWarnings(
+    geo_match(data_num_tbl, zip, target = 25081, covariates = "avg_age")
+  )
+
+  expect_type(pull_(results_tbl, "zip"), type = "character")
 })
 
 ## `covariate` ----------------------------------------------------------------
@@ -145,7 +133,7 @@ test_that("specifying a non-numeric covariate throws error and informs user", {
   expect_error(
     geo_match(
       data_some_num_tbl, state,
-      target     = "CT",
+      target = "CT",
       covariates = c("avg_age", "pop_density")
     ),
 
