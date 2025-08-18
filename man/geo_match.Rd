@@ -2,9 +2,20 @@
 % Please edit documentation in R/geomatch.R
 \name{geo_match}
 \alias{geo_match}
+\alias{geo_match.data.frame}
 \title{Match Geographies Based on Statistical Similarity}
 \usage{
 geo_match(
+  .data,
+  id_col,
+  target,
+  covariates,
+  .matches = 1,
+  .scale = FALSE,
+  .keep = FALSE
+)
+
+\method{geo_match}{data.frame}(
   .data,
   id_col,
   target,

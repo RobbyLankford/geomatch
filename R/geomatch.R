@@ -61,6 +61,19 @@ geo_match <- function(.data,
                       .scale   = FALSE,
                       .keep    = FALSE) {
 
+  UseMethod("geo_match")
+}
+
+#' @rdname geo_match
+#' @export
+geo_match.data.frame <- function(.data,
+                                 id_col,
+                                 target,
+                                 covariates,
+                                 .matches = 1,
+                                 .scale   = FALSE,
+                                 .keep    = FALSE) {
+
   #> need `id_col` to be a column in `.data`
   check_id_col(.data, {{ id_col }})
 
