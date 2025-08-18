@@ -31,6 +31,9 @@
 #'   return. Defaults to 1.
 #' @param .scale (Optional) Whether to normalize the `covariates` before
 #'   calculating the similarity metric. Defaults to `FALSE`.
+#' @param .keep (Optional) Whether to keep all columns in `.data` in the output
+#'   (`TRUE`) or just the `id_col` and `covariates` (`FALSE`). Defaults to
+#'   `FALSE`.
 #'
 #' @returns A `.matches` + 1 row [tibble][tibble::tibble-package] of `id_col`,
 #'   `covariates`, and an additional `.distance` column that contains the
@@ -55,57 +58,34 @@ geo_match <- function(.data,
                       target,
                       covariates,
                       .matches = 1,
-                      .scale   = FALSE) {
+                      .scale   = FALSE,
+                      .keep    = FALSE) {
 
+  #> need `id_col` to be a column in `.data`
   check_id_col(.data, {{ id_col }})
 
   id_col_str <- arg_to_str({{ id_col }})
 
+  #> need `target` to be a (character) value in `id_col`
   check_target(.data, {{ target }}, id_col_str)
-
-  id_col_vals <- pull_(.data, id_col_str)
 
   .data <- validate_id_col(.data, id_col_str)
 
+  #> need at least one numeric `covariate`
   covariates_chr <- validate_covariates(.data, {{ covariates }})
 
+  #> need `.matches` to be at least one but less that total number of IDs
   .matches <- validate_matches(.data, .matches, id_col_str)
 
-  match_data_tbl <- select_(.data, c(id_col_str, covariates_chr))
+  scores_tbl <- calc_match_scores(
+    .data, id_col_str, target, covariates_chr,
 
-  if (.scale) {
-    match_mtrx <- as.matrix(remove_(match_data_tbl, id_col_str))
-    scale_mtrx <- scale(match_mtrx, center = TRUE, scale = TRUE)
+    .scale = .scale,
+    .func  = calc_euclidean_dist,
+    .keep  = .keep
+  )
 
-    match_data_tbl <- as_tibble(
-      cbind(select_(.data, id_col_str), as.data.frame(scale_mtrx))
-    )
-  }
-
-  target_mask_lgl <- pull_(match_data_tbl, id_col_str) == target
-  target_row_tbl  <- filter_(match_data_tbl, target_mask_lgl)
-  target_vars_tbl <- remove_(target_row_tbl, id_col_str)
-
-  control_mask_lgl <- pull_(match_data_tbl, id_col_str) != target
-  control_rows_tbl <- filter_(match_data_tbl, control_mask_lgl)
-  control_vars_tbl <- remove_(control_rows_tbl, id_col_str)
-
-  data_tbl <- rbind(target_vars_tbl, control_vars_tbl)
-  dist_num <- apply(data_tbl, 1, function(row) {
-    sqrt(sum((row - target_vars_tbl) ^ 2))
-  })
-
-  target_mask_lgl <- pull_(.data, id_col_str) == target
-  target_row_tbl  <- filter_(.data, target_mask_lgl)
-
-  control_mask_lgl <- pull_(.data, id_col_str) != target
-  control_rows_tbl <- filter_(.data, control_mask_lgl)
-
-  out_tbl <- rbind(target_row_tbl, control_rows_tbl)
-  out_tbl <- mutate_(out_tbl, ".distance", dist_num)
-  out_tbl <- arrange_(out_tbl, ".distance", .direction = "asc")
-
-  filter_(out_tbl, 1:(.matches + 1))
+  extract_num_matches(scores_tbl, .matches = .matches)
 }
 
 
@@ -117,11 +97,12 @@ geo_match <- function(.data,
 #' that the argument is not missing and that it is a column that exists in
 #' `.data`.
 #'
-#' @return `TRUE`, if `id_col` is valid, otherwise an error is thrown.
+#' @param id_col The unquoted value originally passed to `id_col`.
 #'
+#' @templateVar param id_col
 #' @template param-data-check
-#' @template param-id_col-check-unquote
 #' @template param-call
+#' @template return-validated
 #'
 #' @noRd
 check_id_col <- function(.data, id_col, .call = caller_env()) {
@@ -140,12 +121,12 @@ check_id_col <- function(.data, id_col, .call = caller_env()) {
 #' This function performs initial checks for the `target` argument, ensuring
 #' that the argument is not missing and that it exists in the `id_col` column.
 #'
-#' @return `TRUE`, if `target` is valid, otherwise an error is thrown.
-#'
+#' @templateVar param target
 #' @template param-data-check
 #' @template param-target-check
-#' @template param-id_col-check-quoted
+#' @template param-id_col-quoted
 #' @template param-call
+#' @template return-validated
 #'
 #' @noRd
 check_target <- function(.data, target, id_col, .call = caller_env()) {
@@ -165,7 +146,7 @@ check_target <- function(.data, target, id_col, .call = caller_env()) {
 #' @return `.data`, with `id_col` converted to character type, if necessary.
 #'
 #' @template param-data-check
-#' @template param-id_col-check-quoted
+#' @template param-id_col-quoted
 #' @template param-call
 #'
 #' @noRd
@@ -246,13 +227,12 @@ validate_covariates <- function(.data, covariates, .call = caller_env()) {
 #' This function validates the value of `.matches`, ensuring that it is a value
 #' between some minimum (1) and maximum (one less than the number of IDs).
 #'
-#' @param .matches The numeric value originally passed to `.matches`.
-#'
 #' @return A numeric value of `.matches`, which may be updated from than the
 #'   original value if it is not a valid value.
 #'
 #' @template param-data-check
-#' @template param-id_col-check-quoted
+#' @template param-matches-check
+#' @template param-id_col-quoted
 #' @template param-call
 #'
 #' @noRd
@@ -290,4 +270,186 @@ validate_matches <- function(.data, .matches, id_col, .call = caller_env()) {
   }
 
   .matches
+}
+
+
+#' Normalize a Numeric Data Set
+#'
+#' This function normalizes (centers and scales) a numeric data set and
+#' reorganizes it to have the `id_col` as the first column and all other
+#' columns following.
+#'
+#' @template param-data-match
+#' @template param-id_col-quoted
+#' @template return-tibble
+#'
+#' @noRd
+scale_data <- function(.data, id_col) {
+  id_vals <- pull_(.data, id_col)
+
+  match_mtrx <- as.matrix(remove_(.data, id_col))
+  scale_mtrx <- scale(match_mtrx, center = TRUE, scale = TRUE)
+
+  vec_cbind(tibble({{ id_col }} := id_vals), as.data.frame(scale_mtrx))
+}
+
+
+#' Format Data for Matching
+#'
+#' This function formats a data set to prepare it for matching. It subsets
+#' the data set to just the `id_col` and `covariates` columns, and applies
+#' scaling, if desired.
+#'
+#' @template param-data-check
+#' @template param-id_col-quoted
+#' @template param-scale-check
+#' @template return-tibble
+#'
+#' @noRd
+create_match_data <- function(.data, id_col, covariates, .scale) {
+  match_data_tbl <- select_(.data, c(id_col, covariates))
+
+  if (.scale) match_data_tbl <- scale_data(match_data_tbl, id_col)
+
+  match_data_tbl
+}
+
+
+#' Filter a Data Set Based on a Predicate
+#'
+#' This function filters a data set to return only those rows where the value
+#' in a column (`id_col`) is equal to some specified value (`target`).
+#'
+#' @param .negate (Optional) Whether to return all rows where `id_col` is equal
+#'   to `target` (`FALSE`) or where `id_col` is not equal to `target` (`TRUE`).
+#'   (Defaults to `FALSE`).
+#'
+#' @template param-id_col-quoted
+#' @template param-target-check
+#' @template return-tibble
+#'
+#' @noRd
+extract_rows <- function(.data, id_col, target, .negate = FALSE) {
+  if (.negate) {
+    mask_lgl <- pull_(.data, id_col) != target
+  } else {
+    mask_lgl <- pull_(.data, id_col) == target
+  }
+
+  filter_(.data, mask_lgl)
+}
+
+
+#' Order Target and Control Rows
+#'
+#' This function helps prepare data for matching by ordering the target and
+#' row columns. Functions that calculate distance in this package assume that
+#' the target row is the first row.
+#'
+#' @template param-data-match
+#' @template param-id_col-quoted
+#' @template param-target-check
+#' @template return-tibble
+#'
+#' @noRd
+order_target_control <- function(.data, id_col, target) {
+  target_rows  <- extract_rows(.data, id_col, target)
+  control_rows <- extract_rows(.data, id_col, target, .negate = TRUE)
+
+  vec_rbind(target_rows, control_rows)
+}
+
+
+#' Apply Scoring Function
+#'
+#' This function applies a generic scoring function to a data set. The scoring
+#' function must work on rows and must assume that the target row is the first
+#' row.
+#'
+#' @template param-data-match
+#' @template param-id_col-quoted
+#' @template param-target-check
+#' @template param-func
+#'
+#' @noRd
+apply_score_func <- function(.data, id_col, target, .func) {
+  data_tbl <- order_target_control(.data, id_col, target)
+
+  .func(remove_(data_tbl, id_col))
+}
+
+
+#' Calculate Euclidean Distance
+#'
+#' This function calculates the Euclidean distance between a target row and
+#' all other rows. It assumes that the target row is the first row.
+#'
+#' @template param-data-match
+#' @template return-tibble
+#'
+#' @noRd
+calc_euclidean_dist <- function(.data) {
+
+  #> need target to be top row
+  target_row <- vec_slice(.data, 1)
+
+  apply(.data, 1, function(row) {
+    sqrt(sum((row - target_row) ^ 2))
+  })
+}
+
+
+#' Calculate Match Scores
+#'
+#' This function takes in all the checked and validated inputs to `geo_match`,
+#' and a distance calculation function, formats the data, and runs to the
+#' distance calculation function to return the match scores.
+#'
+#' @param covariates A character vector of (quoted) covariate column names.
+#' @param .keep The `TRUE`/`FALSE` value originally passed to `.keep`.
+#'
+#' @template param-data-check
+#' @template param-id_col-quoted
+#' @template param-target-check
+#' @template param-scale-check
+#' @template param-func
+#' @template return-tibble
+#'
+#' @noRd
+calc_match_scores <- function(.data,
+                              id_col,
+                              target,
+                              covariates,
+                              .scale,
+                              .func,
+                              .keep) {
+
+  match_data_tbl <- create_match_data(.data, id_col, covariates, .scale)
+  distances_num  <- apply_score_func(match_data_tbl, id_col, target, .func)
+
+  out_tbl <- order_target_control(.data, id_col, target)
+  out_tbl <- mutate_(out_tbl, ".distance", distances_num)
+
+  if (!.keep) {
+    out_tbl <- select_(out_tbl, c(colnames(match_data_tbl), ".distance"))
+  }
+
+  arrange_(out_tbl, ".distance", .direction = "asc")
+}
+
+
+#' Extract The Number of Desired Matches
+#'
+#' This function filters the final, post-[calc_match_scores()] data set to
+#' have only the desired number of matches.
+#'
+#' @template param-data
+#' @template param-matches-check
+#' @template return-tibble
+#'
+#' @noRd
+extract_num_matches <- function(.data, .matches = 1) {
+  matches_num <- .matches + 1
+
+  filter_(.data, 1:matches_num)
 }

@@ -190,21 +190,31 @@ test_that("specifying too many matches warns user that default will be used", {
 
 
 # Check Function Output -------------------------------------------------------
-test_that("function output is formatted properly", {
-  result_tbl <- geo_match(
-    simulated_states, state, "CT", c("avg_age", "pop_density")
-  )
+test_that("default function output is formatted properly", {
+  covar_chr  <- c("avg_age", "pop_density")
+  result_tbl <- geo_match(simulated_states, state, "CT", covar_chr)
 
   #> should be a `tbl`
   expect_s3_class(result_tbl, "tbl_df")
 
-  #> should have one additional column named `.distance`
-  expect_equal(ncol(result_tbl), ncol(simulated_states) + 1)
+  #> should include one column for `state`, each covariate, and `.distance`
+  expect_equal(ncol(result_tbl), 1 + length(covar_chr) + 1)
+  expect_setequal(colnames(result_tbl), c("state", covar_chr, ".distance"))
 
-  expect_setequal(
-    colnames(result_tbl),
-    c(colnames(simulated_states), ".distance")
-  )
+  #> should have one row for target and additional row for each of `.matches`
+  expect_equal(nrow(result_tbl), 1 + 1)
+})
+
+test_that("setting `.keep = TRUE` keeps all columns in `.data` in output", {
+  covar_chr  <- c("avg_age", "pop_density")
+  result_tbl <- geo_match(simulated_states, state, "CT", covar_chr, .keep = T)
+
+  #> should be a `tbl`
+  expect_s3_class(result_tbl, "tbl_df")
+
+  #> should include all columns in `.data` and another column for `.distance`
+  expect_equal(ncol(result_tbl), ncol(simulated_states) + 1)
+  expect_setequal(names(result_tbl), c(names(simulated_states), ".distance"))
 
   #> should have one row for target and additional row for each of `.matches`
   expect_equal(nrow(result_tbl), 1 + 1)

@@ -40,7 +40,7 @@ check_exists_in <- function(item, values, name, .call = caller_env()) {
   vals_quo <- enquo(values)
 
   if (quo_is_call(vals_quo)) {
-    vals_chr <- expr_to_str({{ values }})
+    vals_chr <- call_to_str({{ values }})
   } else {
     vals_chr <- as_label(vals_quo)
   }
@@ -60,4 +60,4 @@ check_exists_in <- function(item, values, name, .call = caller_env()) {
 
 arg_to_str <- function(arg) as_name(enquo(arg))
 
-expr_to_str <- function(.expr) as_label(quo_get_expr(enquo(.expr)))
+call_to_str <- function(call) as_label(quo_get_expr(enquo(call)))

@@ -4,7 +4,15 @@
 \alias{geo_match}
 \title{Match Geographies Based on Statistical Similarity}
 \usage{
-geo_match(.data, id_col, target, covariates, .matches = 1, .scale = FALSE)
+geo_match(
+  .data,
+  id_col,
+  target,
+  covariates,
+  .matches = 1,
+  .scale = FALSE,
+  .keep = FALSE
+)
 }
 \arguments{
 \item{.data}{A \code{data.frame} or \link[tibble:tibble-package]{tibble} with one
@@ -23,6 +31,10 @@ return. Defaults to 1.}
 
 \item{.scale}{(Optional) Whether to normalize the \code{covariates} before
 calculating the similarity metric. Defaults to \code{FALSE}.}
+
+\item{.keep}{(Optional) Whether to keep all columns in \code{.data} in the output
+(\code{TRUE}) or just the \code{id_col} and \code{covariates} (\code{FALSE}). Defaults to
+\code{FALSE}.}
 }
 \value{
 A \code{.matches} + 1 row \link[tibble:tibble-package]{tibble} of \code{id_col},

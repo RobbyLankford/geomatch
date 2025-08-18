@@ -19,3 +19,21 @@ test_that("`item` not existing in `values` throws error and informs user", {
   expect_invisible(check_exists_in("a", vals, name = "item"))
   expect_true(check_exists_in("a", vals, name = "item"))
 })
+
+
+# Helpers ---------------------------------------------------------------------
+test_that("helper `arg_to_string` converts function argument to string", {
+  temp_func <- function(x) {
+    arg_to_str({{ x }})
+  }
+
+  expect_equal(temp_func(test), "test")
+})
+
+test_that("helper `call_to_str` converts expression to string", {
+  temp_func <- function(call) {
+    call_to_str({{ call }})
+  }
+
+  expect_equal(temp_func(names(simulated_states)), "names(simulated_states)")
+})
